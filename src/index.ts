@@ -1,5 +1,8 @@
 import { initialize as initializeConnection } from './connection';
 
-const port = 8831;
+const cert = process.env.TLS_CERT_PATH ?? '';
+const key = process.env.TLS_KEY_PATH ?? '';
 
-initializeConnection(port);
+const port = process.env.PORT;
+
+initializeConnection(port, cert, key);

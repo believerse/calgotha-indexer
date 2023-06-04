@@ -1,17 +1,26 @@
+import https from 'https';
+import fs from 'fs';
 import WebSocket, { Server as WebSocketServer } from 'ws';
 import { BOOTSTRAP_NODES, GENESIS_BLOCK_ID } from './constants.json';
 import { BlockMessage, InvBlockMessage } from './types';
 import { handleBlock, processData, getLatestBlock, getRankFor } from './graph';
 
-export const initialize = (port: number) => {
-  startWebSocketServer(port);
+export const initialize = (port: number, tlsCert: string, tlsKey: string) => {
+  const server = https.createServer({
+    cert: fs.readFileSync(tlsCert),
+    key: fs.readFileSync(tlsKey),
+  });
+
+  startWebSocketServer(server);
   startWebSocketClient(BOOTSTRAP_NODES[0]);
+
+  server.listen(port);
 };
 
-const startWebSocketServer = (port: number) => {
-  const server = new WebSocketServer({ port });
-  console.log('server open');
-  server.on('connection', (ws, req) => {
+const startWebSocketServer = (server: https.Server) => {
+  const wsserver = new WebSocketServer({ server });
+  console.log('ws server open');
+  wsserver.on('connection', (ws, req) => {
     console.log(`client connected`);
 
     ws.on('close', () => {

@@ -7,6 +7,7 @@ const graph = createGraph({ multigraph: true });
 
 let rankResults: any;
 let rankedAtBlockId: string;
+let rankedAtHeight: number;
 
 const blockHeightIdMap: Map<number, string> = new Map([
   [0, '00000000ac160efd705be65b11969c82a5841576ffc0d0923389a78cb3d494cb'],
@@ -32,7 +33,7 @@ export const handleBlock = (block_id: string, block: BlockMessage['block']) => {
 };
 
 export const processData = () => {
-  for (let [_, block_id] of blockHeightIdMap) {
+  for (let [height, block_id] of blockHeightIdMap) {
     const block = stagedBlocks.get(block_id);
     block!.transactions.forEach((tx) => {
       graph.addLink(tx.from, tx.to);
@@ -40,13 +41,15 @@ export const processData = () => {
 
     stagedBlocks.delete(block_id); //remove processed blocks from memory
     rankedAtBlockId = block_id;
+    rankedAtHeight = height;
   }
-
-  console.log('lastest block: ', getLatestBlock());
 
   rankResults = pageRank(graph, 1.0);
 
   console.log(rankResults);
+
+  console.log('ranked at block id: ', rankedAtBlockId);
+  console.log('ranked at block id: ', rankedAtBlockId);
 };
 
 export const getLatestBlock = () => {
@@ -66,5 +69,6 @@ export const getRankFor = (public_key: string) => {
     public_key,
     rank: rankResults[public_key],
     rankedAtBlockId,
+    rankedAtHeight,
   };
 };

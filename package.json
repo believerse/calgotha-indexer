@@ -4,8 +4,11 @@
   "description": "calgotha indexer",
   "main": "index.js",
   "scripts": {
+    "build": "tsc",
     "dev": "ts-node-dev --exit-child src/index.ts",
-    "start": "ts-node src/index.ts"
+    "start:ts": "ts-node src/index.ts",
+    "prestart:prod": "npm run build",
+    "start:prod": "PORT=8831 TLS_CERT_PATH=$HOME/certificate.crt TLS_KEY_PATH=$HOME/private.key node build/index.js"
   },
   "keywords": [],
   "author": "",
