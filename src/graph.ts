@@ -1,5 +1,5 @@
 import createGraph from 'ngraph.graph';
-import { BlockHeader, BlockMessage, Transaction } from './types';
+import { BlockMessage } from './types';
 
 const pageRank = require('ngraph.pagerank');
 
@@ -9,47 +9,44 @@ let rankResults: any;
 let rankedAtBlockId: string;
 let rankedAtHeight: number;
 
+graph.addLink(
+  'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
+  'ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZY=',
+  {
+    block_height: 0,
+  },
+);
+
 const blockHeightIdMap: Map<number, string> = new Map([
   [0, '00000000ac160efd705be65b11969c82a5841576ffc0d0923389a78cb3d494cb'],
 ]);
-const stagedBlocks: Map<string, BlockMessage['block']> = new Map([
-  [
-    '00000000ac160efd705be65b11969c82a5841576ffc0d0923389a78cb3d494cb',
-    {
-      header: {} as BlockHeader,
-      transactions: [
-        {
-          from: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
-          to: 'ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZY=',
-        } as Transaction,
-      ],
-    },
-  ],
-]);
 
 export const handleBlock = (block_id: string, block: BlockMessage['block']) => {
-  blockHeightIdMap.set(block.header.height, block_id);
-  stagedBlocks.set(block_id, block);
+  const block_height = block.header.height;
+
+  if (blockHeightIdMap.has(block_height)) {
+    return;
+  }
+
+  blockHeightIdMap.set(block_height, block_id);
+
+  block.transactions.forEach((tx) => {
+    graph.addLink(tx.from, tx.to, {
+      block_height,
+    });
+  });
+
+  rankedAtBlockId = block_id;
+  rankedAtHeight = block_height;
 };
 
 export const processData = () => {
-  for (let [height, block_id] of blockHeightIdMap) {
-    const block = stagedBlocks.get(block_id);
-    block!.transactions.forEach((tx) => {
-      graph.addLink(tx.from, tx.to);
-    });
-
-    stagedBlocks.delete(block_id); //remove processed blocks from memory
-    rankedAtBlockId = block_id;
-    rankedAtHeight = height;
-  }
-
   rankResults = pageRank(graph, 1.0);
 
   console.log(rankResults);
 
   console.log('ranked at block id: ', rankedAtBlockId);
-  console.log('ranked at block id: ', rankedAtBlockId);
+  console.log('ranked at block height: ', rankedAtHeight);
 };
 
 export const getLatestBlock = () => {

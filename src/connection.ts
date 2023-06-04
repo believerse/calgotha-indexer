@@ -77,6 +77,8 @@ const startWebSocketClient = async (nodeAddress: string) => {
   });
 };
 
+let isSyncing = false;
+
 const messageHandler = (node: WebSocket) => {
   interface MessageHandlers {
     [key: string]: (body: any, node: WebSocket) => void;
@@ -84,6 +86,8 @@ const messageHandler = (node: WebSocket) => {
 
   const messageHandlers: MessageHandlers = {
     ['inv_block']: (body: InvBlockMessage, node: WebSocket) => {
+      isSyncing = true;
+
       const block_ids = body.block_ids;
       block_ids.forEach((block_id: string) => {
         fetchBlockById(block_id, node);
@@ -98,13 +102,15 @@ const messageHandler = (node: WebSocket) => {
         return; //Break out of this handler
       }
 
-      console.log('SYNC complete');
-
-      //Warning might skip the last block from ranking due to JS single thread execution model
-      processData();
+      isSyncing = false;
     },
     ['block']: (body: BlockMessage, node: WebSocket) => {
       handleBlock(body.block_id, body.block);
+
+      if (!isSyncing) {
+        console.log('SYNC complete');
+        processData();
+      }
     },
     ['find_common_ancestor']: (body: any, node: WebSocket) => {
       //conditionally toggle GENESIS_BLOCK_ID or LATEST_BLOCK_ID
