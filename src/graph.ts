@@ -61,10 +61,9 @@ export const getBlockCount = () => {
   return blockHeightIdMap.size;
 };
 
-export const getRankFor = (public_key: string) => {
+export const getRankings = () => {
   return {
-    public_key,
-    rank: rankResults[public_key],
+    rankResults,
     rankedAtBlockId,
     rankedAtHeight,
   };

@@ -3,7 +3,7 @@ import fs from 'fs';
 import WebSocket, { Server as WebSocketServer } from 'ws';
 import { BOOTSTRAP_NODES, GENESIS_BLOCK_ID } from './constants.json';
 import { BlockMessage, InvBlockMessage } from './types';
-import { handleBlock, processData, getLatestBlock, getRankFor } from './graph';
+import { handleBlock, processData, getLatestBlock, getRankings } from './graph';
 
 export const initialize = (port: number, tlsCert: string, tlsKey: string) => {
   const server = https.createServer({
@@ -17,8 +17,10 @@ export const initialize = (port: number, tlsCert: string, tlsKey: string) => {
   server.listen(port);
 };
 
+let wsserver: WebSocketServer;
+
 const startWebSocketServer = (server: https.Server) => {
-  const wsserver = new WebSocketServer({ server });
+  wsserver = new WebSocketServer({ server });
   console.log('ws server open');
   wsserver.on('connection', (ws, req) => {
     console.log(`client connected`);
@@ -31,21 +33,15 @@ const startWebSocketServer = (server: https.Server) => {
       console.log(`client errored`);
     });
 
-    ws.on('message', (data: string) => {
-      const parsed = JSON.parse(data);
-      const { type, body } = parsed;
+    const response = getRankings();
 
-      if (type === 'get_rank') {
-        const response = getRankFor(body.public_key as string);
-
-        const jsonResponse = JSON.stringify({
-          type: 'rank_result',
-          body: response,
-        });
-
-        ws.send(jsonResponse);
-      }
+    const jsonResponse = JSON.stringify({
+      type: 'rank_result',
+      body: response,
     });
+
+    console.log('sending data to client');
+    ws.send(jsonResponse);
   });
 };
 
@@ -110,6 +106,7 @@ const messageHandler = (node: WebSocket) => {
       if (!isSyncing) {
         console.log('SYNC complete');
         processData();
+        broadcastRankings();
       }
     },
     ['find_common_ancestor']: (body: any, node: WebSocket) => {
@@ -154,4 +151,24 @@ const findCommonAncestor = (block_id: string, node: WebSocket) => {
     },
   });
   node.send(jsonMessage);
+};
+
+const broadcastRankings = () => {
+  const response = getRankings();
+
+  const jsonResponse = JSON.stringify({
+    type: 'rank_result',
+    body: response,
+  });
+
+  console.log(
+    'sending data to connected clients; count:',
+    wsserver.clients.size,
+  );
+
+  wsserver.clients.forEach(function each(client) {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(jsonResponse, { binary: false });
+    }
+  });
 };
