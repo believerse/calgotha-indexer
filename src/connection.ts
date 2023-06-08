@@ -77,7 +77,7 @@ let isSyncing = false;
 
 const messageHandler = (node: WebSocket) => {
   interface MessageHandlers {
-    [key: string]: (body: any, node: WebSocket) => void;
+    [key: string]: (body: any, node: WebSocket) => void | undefined | null;
   }
 
   const messageHandlers: MessageHandlers = {
@@ -129,8 +129,10 @@ const messageHandler = (node: WebSocket) => {
     const parsed = JSON.parse(data);
     const { type, body } = parsed;
 
+    console.log('message received type: ', parsed);
+
     const handler = messageHandlers[type];
-    handler(body, node);
+    handler?.(body, node);
   });
 };
 
